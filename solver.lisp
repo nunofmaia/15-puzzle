@@ -7,6 +7,24 @@
                                                           (9 10 11 12)
                                                           (13 14 15 nil))))
 
+(defvar *mapa-posicoes* (make-hash-table))
+(setf (gethash 1 *mapa-posicoes*) '(0 0))
+(setf (gethash 2 *mapa-posicoes*) '(0 1))
+(setf (gethash 3 *mapa-posicoes*) '(0 2))
+(setf (gethash 4 *mapa-posicoes*) '(0 3))
+(setf (gethash 5 *mapa-posicoes*) '(1 0))
+(setf (gethash 6 *mapa-posicoes*) '(1 1))
+(setf (gethash 7 *mapa-posicoes*) '(1 2))
+(setf (gethash 8 *mapa-posicoes*) '(1 3))
+(setf (gethash 9 *mapa-posicoes*) '(2 0))
+(setf (gethash 10 *mapa-posicoes*) '(2 1))
+(setf (gethash 11 *mapa-posicoes*) '(2 2))
+(setf (gethash 12 *mapa-posicoes*) '(2 3))
+(setf (gethash 13 *mapa-posicoes*) '(3 0))
+(setf (gethash 14 *mapa-posicoes*) '(3 1))
+(setf (gethash 15 *mapa-posicoes*) '(3 2))
+(setf (gethash nil *mapa-posicoes*) '(3 3))
+
 (defun linha-posicao (posicao)
     (car posicao))
 
@@ -21,32 +39,26 @@
                     (setf value (list i j)))))
         value))
 
-;;; Generic vertical movement
+;;; Generic movement function
 
-(defun mover-vertical (estado sentido predicado)
-    (let* ((posicao (encontra-posicao estado))
+(defun mover (estado sentido predicado tipo-movimento)
+    (let* ((posicao-atual (encontra-posicao estado))
+          (nova-posicao (copy-list posicao-atual))
           (valor nil)
-          (linha-futura (funcall sentido (linha-posicao posicao)))
+          (movimento nil)
           (novo-estado (copy-array estado)))
-        (when (funcall predicado posicao)
-               (setf valor (aref estado linha-futura (coluna-posicao posicao)))
-               (setf (aref novo-estado linha-futura (coluna-posicao posicao)) nil)
-               (setf (aref novo-estado (linha-posicao posicao) (coluna-posicao posicao)) valor)
-               (setf (car posicao) linha-futura))
-        (list novo-estado)))
-
-;;; Generic horizontal movement
-
-(defun mover-horizontal (estado sentido predicado)
-    (let* ((posicao (encontra-posicao estado))
-          (valor nil)
-          (coluna-futura (funcall sentido (coluna-posicao posicao)))
-          (novo-estado (copy-array estado)))
-        (when (funcall predicado posicao)
-               (setf valor (aref estado (linha-posicao posicao) coluna-futura))
-               (setf (aref novo-estado (linha-posicao posicao) coluna-futura) nil)
-               (setf (aref novo-estado (linha-posicao posicao) (coluna-posicao posicao)) valor)
-               (setf (cadr posicao) coluna-futura))
+        (when (funcall predicado posicao-atual)
+            (cond ((string-equal tipo-movimento "vertical")
+                    (setf movimento (funcall sentido (linha-posicao posicao-atual)))
+                    (setf valor (aref estado movimento (coluna-posicao posicao-atual)))
+                    (setf (aref novo-estado movimento (coluna-posicao posicao-atual)) nil)
+                    (setf (car nova-posicao) movimento))
+                  ((string-equal tipo-movimento "horizontal")
+                    (setf movimento (funcall sentido (coluna-posicao posicao-atual)))
+                    (setf valor (aref estado (linha-posicao posicao-atual) movimento))
+                    (setf (aref novo-estado (linha-posicao posicao-atual) movimento) nil)
+                    (setf (cadr nova-posicao) movimento)))
+            (setf (aref novo-estado (linha-posicao posicao-atual) (coluna-posicao posicao-atual)) valor))
         (list novo-estado)))
 
 ;;; Move up
@@ -57,7 +69,7 @@
         nil))
 
 (defun mover-cima (estado)
-    (mover-vertical estado #'1- #'mover-cima-p))
+    (mover estado #'1- #'mover-cima-p "vertical"))
 
 ;;; Move down
 
@@ -67,7 +79,7 @@
         nil))
 
 (defun mover-baixo (estado)
-    (mover-vertical estado #'1+ #'mover-baixo-p))
+    (mover estado #'1+ #'mover-baixo-p "vertical"))
 
 ;;; Move esquerda
 
@@ -77,7 +89,7 @@
         nil))
 
 (defun mover-esquerda (estado)
-    (mover-horizontal estado #'1- #'mover-esquerda-p))
+    (mover estado #'1- #'mover-esquerda-p "horizontal"))
 
 ;;; Move direita
 
@@ -87,7 +99,7 @@
         nil))
 
 (defun mover-direita (estado)
-    (mover-horizontal estado #'1+ #'mover-direita-p))
+    (mover estado #'1+ #'mover-direita-p "horizontal"))
 
 ;;; Heuristic functions
 
@@ -101,8 +113,16 @@
 
 
 (defun distancia-a-posicao-correta (estado)
-    (let ((posicao (encontra-posicao estado)))
-        (+ (- 3 (linha-posicao posicao)) (- 3 (coluna-posicao posicao)))))
+    (let ((value 0)
+          (valor-atual nil)
+          (posicao-suposta nil))
+        (dotimes (i (array-dimension estado 0) value)
+            (dotimes (j (array-dimension estado 1))
+                (setf valor-atual (aref estado i j))
+                (setf posicao-suposta (gethash valor-atual *mapa-posicoes*))
+                (setf value (+ value (+ (abs (- (linha-posicao posicao-suposta) i))
+                                        (abs (- (coluna-posicao posicao-suposta) j)))))))
+        value))
 
 
 ;;; Problem solver
@@ -112,16 +132,36 @@
                       estado-inicial
                       (list #'mover-cima #'mover-esquerda #'mover-direita #'mover-baixo)
                       :estado-final *estado-final*
-                      :heuristica #'posicoes-fora-do-sitio
+                      ;:heuristica #'posicoes-fora-do-sitio
+                      :heuristica #'distancia-a-posicao-correta
                       :estado= #'equalp)))
         (procura problema tipo-procura)))
 
-(setf dummy-estado (make-array '(4 4)
+
+(defvar estado-1)
+(defvar estado-2)
+(defvar estado-3)
+(defvar estado-100)
+
+(setf estado-1 (make-array '(4 4)
                                 :initial-contents '((1 2 3 4)
                                                     (5 6 7 8)
                                                     (13 9 10 11)
                                                     (14 nil 15 12))))
-(setf hard-estado (make-array '(4 4)
+
+(setf estado-2 (make-array '(4 4)
+                                :initial-contents '((2 6 3 4)
+                                                    (1 13 7 8)
+                                                    (5 9 11 12)
+                                                    (10 14 nil 15))))
+
+(setf estado-3 (make-array '(4 4)
+                                :initial-contents '((2 6 3 4)
+                                                    (1 13 7 8)
+                                                    (5 9 11 12)
+                                                    (14 10 nil 15))))
+
+(setf estado-100 (make-array '(4 4)
                                 :initial-contents '((nil 15 14 13)
                                                     (12 11 10 9)
                                                     (8 7 6 5)
