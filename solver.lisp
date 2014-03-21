@@ -42,24 +42,25 @@
 ;;; Generic movement function
 
 (defun mover (estado sentido predicado tipo-movimento)
-    (let* ((posicao-atual (encontra-posicao estado))
-          (nova-posicao (copy-list posicao-atual))
-          (valor nil)
-          (movimento nil)
-          (novo-estado (copy-array estado)))
+    (let* ((posicao-atual (car estado))
+           (estado-atual (cdr estado))
+           (valor nil)
+           (movimento nil)
+           (nova-posicao (copy-list posicao-atual))
+           (novo-estado (copy-array estado-atual)))
         (when (funcall predicado posicao-atual)
             (cond ((string-equal tipo-movimento "vertical")
                     (setf movimento (funcall sentido (linha-posicao posicao-atual)))
-                    (setf valor (aref estado movimento (coluna-posicao posicao-atual)))
+                    (setf valor (aref estado-atual movimento (coluna-posicao posicao-atual)))
                     (setf (aref novo-estado movimento (coluna-posicao posicao-atual)) nil)
                     (setf (car nova-posicao) movimento))
                   ((string-equal tipo-movimento "horizontal")
                     (setf movimento (funcall sentido (coluna-posicao posicao-atual)))
-                    (setf valor (aref estado (linha-posicao posicao-atual) movimento))
+                    (setf valor (aref estado-atual (linha-posicao posicao-atual) movimento))
                     (setf (aref novo-estado (linha-posicao posicao-atual) movimento) nil)
                     (setf (cadr nova-posicao) movimento)))
-            (setf (aref novo-estado (linha-posicao posicao-atual) (coluna-posicao posicao-atual)) valor))
-        (list novo-estado)))
+            (setf (aref novo-estado (linha-posicao posicao-atual) (coluna-posicao posicao-atual)) valor)
+            (list (cons nova-posicao novo-estado)))))
 
 ;;; Move up
 
@@ -104,44 +105,50 @@
 ;;; Heuristic functions
 
 (defun posicoes-fora-do-sitio (estado)
-    (let ((value 0))
-        (dotimes (i (array-dimension estado 0) value)
-            (dotimes (j (array-dimension estado 1))
-                (if (not (equalp (aref estado i j) (aref *estado-final* i j)))
+    (let ((value 0)
+          (estado-atual (cdr estado)))
+        (dotimes (i (array-dimension estado-atual 0) value)
+            (dotimes (j (array-dimension estado-atual 1))
+                (if (not (equalp (aref estado-atual i j) (aref *estado-final* i j)))
                     (incf value))))
         value))
 
 
 (defun distancia-a-posicao-correta (estado)
     (let ((value 0)
+          (estado-atual (cdr estado))
           (valor-atual nil)
           (posicao-suposta nil))
-        (dotimes (i (array-dimension estado 0) value)
-            (dotimes (j (array-dimension estado 1))
-                (setf valor-atual (aref estado i j))
+        (dotimes (i (array-dimension estado-atual 0) value)
+            (dotimes (j (array-dimension estado-atual 1))
+                (setf valor-atual (aref estado-atual i j))
                 (setf posicao-suposta (gethash valor-atual *mapa-posicoes*))
                 (setf value (+ value (+ (abs (- (linha-posicao posicao-suposta) i))
                                         (abs (- (coluna-posicao posicao-suposta) j)))))))
         value))
 
+(defun testa-estado (estado estado-final)
+    (equalp (cdr estado) (cdr estado-final)))
 
 ;;; Problem solver
 
 (defun resolve-problema (estado-inicial &optional (tipo-procura "profundidade"))
-    (let ((problema (cria-problema
-                      estado-inicial
+    (let* ((posicao-inicial (encontra-posicao estado-inicial))
+          (par-inicial (cons posicao-inicial estado-inicial))
+          (problema (cria-problema
+                      par-inicial
                       (list #'mover-cima #'mover-esquerda #'mover-direita #'mover-baixo)
-                      :estado-final *estado-final*
-                      ;:heuristica #'posicoes-fora-do-sitio
+                      :estado-final (cons '(3 3) *estado-final*)
                       :heuristica #'distancia-a-posicao-correta
-                      :estado= #'equalp)))
+                      :estado= #'testa-estado)))
         (procura problema tipo-procura)))
 
 
 (defvar estado-1)
 (defvar estado-2)
 (defvar estado-3)
-(defvar estado-100)
+(defvar estado-4)
+(defvar estado-5)
 
 (setf estado-1 (make-array '(4 4)
                                 :initial-contents '((1 2 3 4)
@@ -156,13 +163,19 @@
                                                     (10 14 nil 15))))
 
 (setf estado-3 (make-array '(4 4)
-                                :initial-contents '((2 6 3 4)
-                                                    (1 13 7 8)
-                                                    (5 9 11 12)
-                                                    (14 10 nil 15))))
+                                :initial-contents '((nil 6 3 4)
+                                                    (2 13 7 8)
+                                                    (1 5 9 12)
+                                                    (10 14 11 15))))
 
-(setf estado-100 (make-array '(4 4)
-                                :initial-contents '((nil 15 14 13)
-                                                    (12 11 10 9)
-                                                    (8 7 6 5)
-                                                    (4 3 2 1))))
+(setf estado-4 (make-array '(4 4)
+                                :initial-contents '((6 13 3 4)
+                                                    (2 7 8 12)
+                                                    (nil 1 5 15)
+                                                    (10 14 9 11))))
+
+(setf estado-5 (make-array '(4 4)
+                                :initial-contents '((13 10 11 6)
+                                                    (5 7 4 8)
+                                                    (1 12 14 9)
+                                                    (3 15 2 nil))))
