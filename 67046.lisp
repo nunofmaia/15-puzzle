@@ -114,7 +114,7 @@
         value))
 
 
-(defun distancia-a-posicao-correta (estado)
+(defun distancia-de-manhattan (estado)
     (let ((value 0)
           (estado-atual (cdr estado))
           (valor-atual nil)
@@ -126,6 +126,23 @@
                 (setf value (+ value (+ (abs (- (linha-posicao posicao-suposta) i))
                                         (abs (- (coluna-posicao posicao-suposta) j)))))))
         value))
+
+(defun posicao-para-valor (i j)
+  (+ 1 j (* 4 i)))
+
+(defun distancia-a-posicao-correta (estado)
+    (let ((value 0)
+          (estado-atual (cdr estado))
+          (valor-atual nil)
+          (valor-suposto nil))
+        (dotimes (i (array-dimension estado-atual 0) value)
+            (dotimes (j (array-dimension estado-atual 1))
+                (setf valor-atual (aref estado-atual i j))
+                (setf valor-suposto (posicao-para-valor i j))
+                (when (not (null valor-atual))
+                  (setf value (+ value (abs (- valor-suposto valor-atual)))))))
+        (+ value (posicoes-fora-do-sitio estado))))
+
 
 (defun testa-estado (estado-a estado-b)
     (equalp (cdr estado-a) (cdr estado-b)))
