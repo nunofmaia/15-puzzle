@@ -127,8 +127,8 @@
                                         (abs (- (coluna-posicao posicao-suposta) j)))))))
         value))
 
-(defun testa-estado (estado estado-final)
-    (equalp (cdr estado) (cdr estado-final)))
+(defun testa-estado (estado-a estado-b)
+    (equalp (cdr estado-a) (cdr estado-b)))
 
 ;;; Problem solver
 
