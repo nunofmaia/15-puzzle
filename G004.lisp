@@ -141,24 +141,32 @@
                 (setf valor-suposto (posicao-para-valor i j))
                 (when (not (null valor-atual))
                   (setf value (+ value (abs (- valor-suposto valor-atual)))))))
-        (+ value (posicoes-fora-do-sitio estado))))
+        value))
 
 
 (defun testa-estado (estado-a estado-b)
     (equalp (cdr estado-a) (cdr estado-b)))
+
+(defun faz-resultado (resultado-procura)
+  (let ((resultado nil))
+    (dolist (e resultado-procura)
+      (setf resultado (nconc resultado (list (cdr e)))))
+    resultado))
 
 ;;; Problem solver
 
 (defun resolve-problema (estado-inicial &optional (tipo-procura "profundidade"))
     (let* ((posicao-inicial (encontra-posicao estado-inicial))
           (par-inicial (cons posicao-inicial estado-inicial))
+          (resultado nil)
           (problema (cria-problema
                       par-inicial
                       (list #'mover-cima #'mover-esquerda #'mover-direita #'mover-baixo)
                       :estado-final (cons '(3 3) *estado-final*)
                       :heuristica #'distancia-a-posicao-correta
                       :estado= #'testa-estado)))
-        (procura problema tipo-procura)))
+        (setf resultado (car (procura problema tipo-procura)))
+        (faz-resultado resultado)))
 
 
 (defvar estado-1)
@@ -166,6 +174,14 @@
 (defvar estado-3)
 (defvar estado-4)
 (defvar estado-5)
+(defvar estado-6)
+(defvar estado-7)
+(defvar estado-8)
+(defvar estado-9)
+(defvar estado-10)
+(defvar estado-11)
+(defvar estado-12)
+(defvar estado-13)
 
 (setf estado-1 (make-array '(4 4)
                                 :initial-contents '((1 2 3 4)
@@ -191,8 +207,58 @@
                                                     (nil 1 5 15)
                                                     (10 14 9 11))))
 
+;;; Worst cases
+
 (setf estado-5 (make-array '(4 4)
-                                :initial-contents '((13 10 11 6)
-                                                    (5 7 4 8)
-                                                    (1 12 14 9)
-                                                    (3 15 2 nil))))
+                                :initial-contents '((15 14 8 12)
+                                                    (10 11 9 13)
+                                                    (2 6 5 1)
+                                                    (3 4 4 nil))))
+
+(setf estado-6 (make-array '(4 4)
+                                :initial-contents '((15 11 13 12)
+                                                    (14 10 8 9)
+                                                    (7 2 5 1)
+                                                    (3 6 4 nil))))
+
+(setf estado-7 (make-array '(4 4)
+                                :initial-contents '((15 11 13 12)
+                                                    (14 10 8 9)
+                                                    (2 6 5 1)
+                                                    (3 7 4 nil))))
+
+(setf estado-8 (make-array '(4 4)
+                                :initial-contents '((15 11 9 12)
+                                                    (14 10 13 8)
+                                                    (6 7 5 1)
+                                                    (3 2 4 nil))))
+
+(setf estado-9 (make-array '(4 4)
+                                :initial-contents '((15 11 9 12)
+                                                    (14 10 13 8)
+                                                    (2 6 5 1)
+                                                    (3 7 4 nil))))
+
+(setf estado-10 (make-array '(4 4)
+                                :initial-contents '((15 11 8 12)
+                                                    (14 10 13 9)
+                                                    (2 7 5 1)
+                                                    (3 6 4 nil))))
+
+(setf estado-11 (make-array '(4 4)
+                                :initial-contents '((15 11 9 12)
+                                                    (14 10 8 13)
+                                                    (6 2 5 1)
+                                                    (3 7 4 nil))))
+
+(setf estado-12 (make-array '(4 4)
+                                :initial-contents '((15 11 8 12)
+                                                    (14 10 9 13)
+                                                    (2 6 5 1)
+                                                    (3 7 4 nil))))
+
+(setf estado-13 (make-array '(4 4)
+                                :initial-contents '((15 11 8 12)
+                                                    (14 10 9 13)
+                                                    (2 6 4 5)
+                                                    (3 7 1 nil))))
